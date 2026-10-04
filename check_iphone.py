@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check Apple Canada store pickup availability and send a push alert via ntfy.
+"""Check Apple Canada store pickup availability and send a Gmail alert.
 
 Config (environment variables):
   PART_NUMBER    Apple part number, e.g. MJX74VC/A            (required)
@@ -32,7 +32,7 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
 
 def fetch_stores(postal):
     qs = urllib.parse.urlencode({
-        "pl": "true", "mts.0": "regular", "mts.1": "compact",
+        "fae": "true", "pl": "true", "mts.0": "regular", "mts.1": "compact",
         "parts.0": PART, "location": postal,
     })
     url = f"https://www.apple.com/ca/shop/fulfillment-messages?{qs}"
