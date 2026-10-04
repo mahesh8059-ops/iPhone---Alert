@@ -14,6 +14,7 @@ import json
 import os
 import smtplib
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from email.message import EmailMessage
@@ -35,9 +36,23 @@ def fetch_stores(postal):
         "parts.0": PART, "location": postal,
     })
     url = f"https://www.apple.com/ca/shop/fulfillment-messages?{qs}"
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        data = json.load(r)
+    req = urllib.request.Request(url, headers={
+        "User-Agent": UA,
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-CA,en;q=0.9",
+        "Referer": "https://www.apple.com/ca/shop/buy-iphone/iphone-18-pro",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            raw = r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        print("HTTP", e.code, "body:", e.read()[:300].decode("utf-8", "replace"), file=sys.stderr)
+        raise
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        print("Not JSON, first 300 chars:", raw[:300], file=sys.stderr)
+        raise
     return data["body"]["content"]["pickupMessage"]["stores"]
 
 
