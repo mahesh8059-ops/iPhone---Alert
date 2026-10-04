@@ -34,7 +34,7 @@ def fetch_stores(postal):
     qs = urllib.parse.urlencode({
         "fae": "true", "pl": "true", "mts.0": "regular", "mts.1": "compact",
         "parts.0": PART, "location": postal,
-    })
+    }, quote_via=urllib.parse.quote, safe="/")  # keep "/" raw, like Apple's own request
     url = f"https://www.apple.com/ca/shop/fulfillment-messages?{qs}"
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
