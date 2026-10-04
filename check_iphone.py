@@ -3,7 +3,7 @@
 
 Config (environment variables):
   PART_NUMBER    Apple part number, e.g. MJX74VC/A            (required)
-  POSTAL_CODES   comma-separated postal codes to search from  (required)
+  POSTAL_CODES   comma-separated Apple store codes (e.g. R280) or postal codes (required)
   GMAIL_ADDRESS  your Gmail address (alerts are sent to yourself) (required)
   GMAIL_APP_PASSWORD  16-character Google app password         (required)
   STORE_FILTER   optional comma-separated words; only stores whose name
@@ -12,6 +12,7 @@ Config (environment variables):
 """
 import json
 import os
+import re
 import smtplib
 import sys
 import urllib.error
@@ -30,11 +31,16 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
 
-def fetch_stores(postal):
-    qs = urllib.parse.urlencode({
-        "fae": "true", "pl": "true", "mts.0": "regular", "mts.1": "compact",
-        "parts.0": PART, "location": postal,
-    }, quote_via=urllib.parse.quote, safe="/")  # keep "/" raw, like Apple's own request
+def fetch_stores(place):
+    """`place` is an Apple store code like R280 (preferred) or a postal code."""
+    params = {"fae": "true", "pl": "true", "mts.0": "regular", "mts.1": "compact",
+              "parts.0": PART}
+    if re.fullmatch(r"R\d+", place, re.I):
+        params["searchNearby"] = "true"
+        params["store"] = place.upper()
+    else:
+        params["location"] = place
+    qs = urllib.parse.urlencode(params, quote_via=urllib.parse.quote, safe="/")
     url = f"https://www.apple.com/ca/shop/fulfillment-messages?{qs}"
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
@@ -59,7 +65,10 @@ def fetch_stores(postal):
 def available_stores():
     found = {}
     for postal in POSTALS:
-        for s in fetch_stores(postal):
+        stores = fetch_stores(postal)
+        print(f"{postal}: Apple returned {len(stores)} stores:",
+              ", ".join(x.get("storeName", "?") for x in stores))
+        for s in stores:
             name = s.get("storeName", "")
             info = s.get("partsAvailability", {}).get(PART, {})
             ok = info.get("pickupDisplay") == "available" or info.get("storePickEligible") is True \
